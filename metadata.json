@@ -1,0 +1,13 @@
+{
+  "name": "Remix 03.05 - time to meal",
+  "description": "Enterprise-grade hostel canteen pre-ordering with real-time analytics, PWA notifications, and live TV tracking.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "permissions": [
+    "notifications"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
