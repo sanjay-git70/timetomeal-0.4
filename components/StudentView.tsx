@@ -21,7 +21,7 @@ import { StudentReceiptModal } from './StudentReceiptModal';
 import { CancelOrderModal } from './CancelOrderModal';
 
 // Quick check if constants didn't export some icons, we import them from lucide-react safely
-import { Plus, ListFilter, Trash2, CheckCircle2, RotateCw } from 'lucide-react';
+import { Plus, ListFilter, Trash2, CheckCircle2, RotateCw, XCircle } from 'lucide-react';
 
 interface StudentViewProps {
   user: User;
@@ -264,13 +264,14 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
   const total = useMemo(() => cart.reduce((sum, i) => sum + (i.price * i.quantity), 0), [cart]);
   const upfront = paymentRatio === 'full' ? total : Math.round(total * 0.5);
 
-  const handleConfirmCancelOrder = (orderId: string, reason: string) => {
+  const handleConfirmCancelOrder = (orderId: string, reason: string, comment?: string) => {
+    const fullReason = comment && comment.trim() ? `${reason} (${comment.trim()})` : reason;
     const updatedOrders = orders.map(o => {
       if (o.id === orderId) {
         return {
           ...o,
           order_status: 'cancelled' as const,
-          cancellation_reason: reason
+          cancellation_reason: fullReason
         };
       }
       return o;
@@ -648,7 +649,7 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
   };
 
   return (
-    <div className={`bg-[#F8FAF9] dark:bg-slate-950 text-gray-900 dark:text-slate-100 font-sans transition-colors duration-300 ${(activeTab === 'cart' || activeTab === 'orders') ? 'h-screen h-[100dvh] overflow-hidden flex flex-col' : 'min-h-screen pb-32'}`}>
+    <div className={`bg-[#F8FAF9] dark:bg-slate-950 text-gray-900 dark:text-slate-100 font-sans transition-colors duration-300 ${(activeTab === 'cart' || activeTab === 'orders' || activeTab === 'history') ? 'h-screen h-[100dvh] overflow-hidden flex flex-col' : 'min-h-screen pb-32'}`}>
       {/* Upper header - Clean human-crafted layout */}
       {activeTab === 'home' && (
       <header className="sticky top-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 px-5 py-3 flex justify-between items-center z-40 transition-colors duration-300 shrink-0">
@@ -1198,7 +1199,7 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
         )}
 
         {/* ACTIVE TICKETS VIEW */}
-        {activeTab === 'orders' && (
+        {(activeTab === 'orders' || activeTab === 'history') && (
           <div className="flex-1 flex flex-col min-h-0 bg-gray-50 dark:bg-slate-950 w-full animate-in slide-in-from-right-4 duration-300">
             {cancellingPageOrderId ? (
               /* CANCEL ORDER PAGE */
@@ -1294,7 +1295,7 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
                       <button
                         onClick={() => {
                           const refNum = `REF-${Math.floor(100000 + Math.random() * 900000)}`;
-                          handleConfirmCancelOrder(cancelOrder!.id, cancelReason);
+                          handleConfirmCancelOrder(cancelOrder!.id, cancelReason, cancelComment);
                           setCancelSuccessData({ referenceNumber: refNum });
                         }}
                         className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-[12px] shadow-sm transition-all active:scale-[0.98] mt-2"
@@ -1500,15 +1501,38 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
                         )}
                       </div>
 
-                      {canCancel && (
-                         <div className="pt-4 flex justify-center">
-                            <button
-                               onClick={() => setCancellingPageOrderId(order.id)}
-                               className="text-red-500 hover:text-red-700 text-sm font-bold transition-colors underline underline-offset-4"
-                            >
-                               Cancel Order
-                            </button>
-                         </div>
+                      {/* Cancellation Timer & Cancel Button Section */}
+                      {order.order_status === 'pending' && (
+                        <div className="pt-2">
+                          {canCancel ? (
+                            <div className="bg-red-50/90 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 rounded-[14px] p-4 space-y-3 shadow-sm">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Clock className="w-4 h-4 text-red-600 dark:text-red-400 animate-pulse" />
+                                  <span className="text-xs font-black text-red-900 dark:text-red-200 uppercase tracking-wider">
+                                    Cancellation Window
+                                  </span>
+                                </div>
+                                <CancellationTimer createdAt={order.created_at} />
+                              </div>
+                              <p className="text-xs text-red-700 dark:text-red-300 font-medium leading-relaxed">
+                                You can cancel this order within 20 minutes of placement. Select a reason on the next screen.
+                              </p>
+                              <button
+                                onClick={() => setCancellingPageOrderId(order.id)}
+                                className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-[12px] text-xs uppercase tracking-wider transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
+                              >
+                                <XCircle className="w-4 h-4" /> Cancel This Order
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="bg-gray-100 dark:bg-slate-800/60 border border-gray-200 dark:border-slate-700 rounded-[12px] p-3 text-center">
+                              <p className="text-xs font-semibold text-gray-500 dark:text-slate-400">
+                                ⏱ 20-minute cancellation window expired for this order
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1537,7 +1561,7 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
                       </button>
                     </div>
                   ) : (
-                    orders.filter(o => o.order_status !== 'completed' && o.order_status !== 'cancelled').map(order => {
+                    orders.filter(o => o.order_status !== 'delivered' && o.order_status !== 'cancelled').map(order => {
                       // Horizontal Progress Tracker logic
                       // Placed -> Confirmed -> Preparing -> Ready
                       const steps = ['pending', 'confirmed', 'preparing', 'ready'];
@@ -1605,11 +1629,11 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
                     })
                   )}
 
-                  {orders.some(o => o.order_status === 'completed' || o.order_status === 'cancelled') && (
+                  {orders.some(o => o.order_status === 'delivered' || o.order_status === 'cancelled') && (
                     <div className="pt-6">
                       <h4 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight mb-4 px-2">Past Orders</h4>
                       <div className="space-y-3">
-                        {orders.filter(o => o.order_status === 'completed' || o.order_status === 'cancelled').map(order => (
+                        {orders.filter(o => o.order_status === 'delivered' || o.order_status === 'cancelled').map(order => (
                           <div key={order.id} className="bg-white dark:bg-slate-900 p-4 rounded-[12px] shadow-sm border border-gray-100 dark:border-slate-800 opacity-75 hover:opacity-100 transition-opacity">
                             <div className="flex justify-between items-start mb-3">
                               <div>
@@ -2138,7 +2162,7 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
           { tab: 'cart', icon: <ShoppingCart className="w-5 h-5" />, label: 'Cart' },
           { tab: 'settings', icon: <Settings className="w-5 h-5" />, label: 'Settings' }
         ].map((item) => {
-          const isActive = activeTab === item.tab || (item.tab === 'settings' && isSettingsOpen);
+          const isActive = activeTab === item.tab || (item.tab === 'orders' && activeTab === 'history') || (item.tab === 'settings' && isSettingsOpen);
           const totalCartItems = cart.reduce((sum, i) => sum + i.quantity, 0);
 
           if (isActive) {

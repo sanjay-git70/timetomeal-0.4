@@ -6,13 +6,14 @@ import StudentView from './components/StudentView';
 import StaffView from './components/StaffView';
 import AdminView from './components/AdminView';
 import { MENU_ITEMS } from './constants';
-import { Coffee, Shield } from 'lucide-react';
+import { Coffee, Shield, LogOut } from 'lucide-react';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Initialize Data from LocalStorage or Constants
   useEffect(() => {
@@ -72,7 +73,12 @@ const App: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogoutRequest = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = () => {
+    setShowLogoutConfirm(false);
     setUser(null);
     localStorage.removeItem('hb_current_user');
   };
@@ -89,21 +95,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50/50 dark:bg-slate-950 text-gray-900 dark:text-slate-100 transition-colors duration-300 overflow-x-hidden selection:bg-emerald-500 selection:text-white">
-      {/* Admin Top Bar Overlay */}
-      {user.role === 'admin' && (
-        <header className="bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 px-6 py-4 flex items-center justify-between sticky top-0 z-50 shadow-sm print:hidden">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl shadow-lg bg-gray-900 dark:bg-emerald-950">
-              <Shield className="text-emerald-400 w-5 h-5" />
-            </div>
-            <div className="flex flex-col">
-              <h1 className="font-black text-gray-950 dark:text-white text-base leading-none">Master Console</h1>
-              <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-black uppercase tracking-[0.15em] mt-1">Full System Authority</span>
-            </div>
-          </div>
-        </header>
-      )}
-
       <main className="mx-auto">
         {user.role === 'student' && (
           <StudentView 
@@ -111,10 +102,11 @@ const App: React.FC = () => {
             orders={orders} 
             menu={menu} 
             onUpdateOrders={updateOrders} 
-            onLogout={handleLogout} 
+            onLogout={handleLogoutRequest} 
             onUpdateProfile={handleUpdateProfile} 
           />
         )}
+
         {user.role === 'staff' && (
           <StaffView 
             user={user} 
@@ -122,21 +114,53 @@ const App: React.FC = () => {
             menu={menu} 
             onUpdateOrders={updateOrders} 
             onUpdateMenu={updateMenu} 
-            onLogout={handleLogout}
+            onLogout={handleLogoutRequest}
           />
         )}
+
         {user.role === 'admin' && (
-          <div className="max-w-screen-2xl mx-auto p-6 md:p-10">
-            <AdminView 
-              user={user} 
-              orders={orders} 
-              menu={menu} 
-              onUpdateOrders={updateOrders} 
-              onLogout={handleLogout}
-            />
-          </div>
+          <AdminView 
+            user={user} 
+            orders={orders} 
+            menu={menu} 
+            onUpdateOrders={updateOrders} 
+            onLogout={handleLogoutRequest}
+          />
         )}
       </main>
+
+      {/* Logout Confirmation Dialog */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-gray-100 dark:border-slate-800 space-y-5 text-center animate-in zoom-in-95 duration-200">
+            <div className="w-14 h-14 rounded-2xl bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto">
+              <LogOut className="w-7 h-7" />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-slate-900 dark:text-white">Confirm Logout</h3>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+                Are you sure you want to log out of your session? You will need to log back in to access your account.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(false)}
+                className="py-3 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-extrabold text-xs rounded-xl transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmLogout}
+                className="py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs rounded-xl transition-all shadow-md active:scale-95"
+              >
+                Confirm Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

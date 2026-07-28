@@ -1,6 +1,6 @@
 {
-  "name": "Remix 03.05 - time to meal",
-  "description": "Enterprise-grade hostel canteen pre-ordering with real-time analytics, PWA notifications, and live TV tracking.",
+  "name": "Time To Meal",
+  "description": "Enterprise-grade SaaS canteen pre-ordering & Super Admin management platform with real-time analytics, college node routing, and live order pipeline.",
   "requestFramePermissions": [
     "camera"
   ],
