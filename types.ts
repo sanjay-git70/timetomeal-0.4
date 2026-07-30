@@ -48,6 +48,16 @@ export interface StudentProfile {
   room_number: string;
   phone_number: string;
   photo_url?: string;
+  google_id?: string;
+  college_id?: string;
+  college_name?: string;
+  roll_number?: string;
+  mobile_number?: string;
+  department?: string;
+  year?: string;
+  section?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface PrinterSettings {

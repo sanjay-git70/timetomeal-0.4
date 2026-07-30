@@ -88,8 +88,17 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
   const [showPlacedPopup, setShowPlacedPopup] = useState(false);
   const [selectedMeal, setSelectedMeal] = useState<MenuItem | null>(null);
   const [selectedMealQty, setSelectedMealQty] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState<string>('razorpay'); // razorpay, upi, cod
-  const [paymentRatio, setPaymentRatio] = useState<'half' | 'full'>('half'); // 50% vs 100% upfront
+  const [paymentMethod, setPaymentMethod] = useState<string>('cashfree'); // cashfree, upi, cod
+  const [paymentRatio, setPaymentRatio] = useState<'half' | 'full'>('full'); // 100% upfront (paymentRatio selection is removed)
+  
+  // Simulated Cashfree Payments States
+  const [isCashfreeModalOpen, setIsCashfreeModalOpen] = useState(false);
+  const [cashfreeModalAmount, setCashfreeModalAmount] = useState(0);
+  const [cashfreeModalCallback, setCashfreeModalCallback] = useState<(paymentId: string) => void>(() => () => {});
+  const [cashfreeModalDescription, setCashfreeModalDescription] = useState('');
+  const [cashfreeModalOrderCode, setCashfreeModalOrderCode] = useState('');
+  const [cashfreePaymentLoading, setCashfreePaymentLoading] = useState(false);
+  const [cashfreeSelectedMethod, setCashfreeSelectedMethod] = useState<'upi' | 'card' | 'netbanking'>('upi');
   
   const [selectedCanteenName, setSelectedCanteenName] = useState<string>('TimeToMeal Main Canteen');
 
@@ -342,7 +351,7 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
       alert('Payment method can only be changed while order status is Pending.');
       return;
     }
-    const isFull = newRatio === 'full' || newMethod === 'Razorpay' || newMethod === 'UPI';
+    const isFull = newRatio === 'full' || newMethod === 'cashfree' || newMethod === 'Cashfree' || newMethod === 'UPI';
     const paid = newMethod === 'cod' ? 0 : (isFull ? order.total_amount : Math.round(order.total_amount * 0.5));
     const status = newMethod === 'cod' ? 'pending_cash_payment' as const : (isFull ? 'paid' as const : 'advance_paid' as const);
     
@@ -361,8 +370,7 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
     alert('Payment method updated successfully.');
   };
 
-  const handleRazorpayCheckoutForExistingOrder = (orderId: string, amountDue: number) => {
-    const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_TJCR2oIU69Zu0j';
+  const handleCashfreeCheckoutForExistingOrder = (orderId: string, amountDue: number) => {
     const existingOrder = orders.find(o => o.id === orderId);
     if (!existingOrder) return;
     
@@ -380,7 +388,7 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
               ...(order.payments || []),
               {
                 order_id: orderId,
-                payment_method: 'Razorpay',
+                payment_method: 'Cashfree',
                 payment_status: 'completed',
                 transaction_reference: paymentId,
                 paid_amount: amountDue
@@ -395,51 +403,17 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
       setPaymentScreenOrderId(null);
     };
 
-    if (typeof window !== 'undefined' && window.Razorpay) {
-      try {
-        const options = {
-          key: razorpayKey,
-          amount: Math.round(amountDue * 100), // in paise
-          currency: 'INR',
-          name: 'TimeToMeal Campus Canteen',
-          description: `Pending Payment for Order #${existingOrder.order_code}`,
-          image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=200',
-          handler: function (response: any) {
-            const paymentId = response.razorpay_payment_id || `pay_${Math.random().toString(36).substr(2, 9)}`;
-            processSuccessfulPayment(paymentId);
-          },
-          prefill: {
-            name: studentProfile?.full_name || 'Student User',
-            email: user.email || 'student@campus.edu',
-            contact: studentProfile?.phone_number || '9876543210'
-          },
-          theme: {
-            color: '#059669' // Emerald theme
-          },
-          modal: {
-            ondismiss: function() {
-              console.log('Payment checkout cancelled');
-            }
-          }
-        };
-        const rzp = new window.Razorpay(options);
-        rzp.on('payment.failed', function (response: any) {
-          alert('Payment failed: ' + response.error.description);
-        });
-        rzp.open();
-      } catch (err) {
-        console.error('Razorpay initialization failed', err);
-        processSuccessfulPayment(`pay_mock_${Math.random().toString(36).substr(2, 9)}`);
-      }
-    } else {
-      processSuccessfulPayment(`pay_mock_${Math.random().toString(36).substr(2, 9)}`);
-    }
+    // Open the high-fidelity Cashfree payments checkout modal
+    setCashfreeModalAmount(amountDue);
+    setCashfreeModalCallback(() => processSuccessfulPayment);
+    setCashfreeModalDescription(`Pending Payment for Order #${existingOrder.order_code}`);
+    setCashfreeModalOrderCode(existingOrder.order_code);
+    setIsCashfreeModalOpen(true);
   };
 
-  const handleRazorpayCheckout = () => {
+  const handleCashfreeCheckout = () => {
     if (cart.length === 0) return;
     const canteenId = menu.length > 0 ? menu[0].canteen_id : 'canteen-1';
-    const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_TJCR2oIU69Zu0j';
     const orderCode = Math.floor(1000 + Math.random() * 9000).toString();
 
     const processSuccessfulPayment = (paymentId: string) => {
@@ -450,7 +424,7 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
         canteen_id: canteenId,
         total_amount: total,
         paid_amount: upfront,
-        payment_method: 'Razorpay',
+        payment_method: 'Cashfree',
         payment_status: paymentRatio === 'full' ? 'paid' : 'advance_paid',
         order_status: 'pending',
         order_type: 'online',
@@ -460,7 +434,7 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
         student_details: studentProfile,
         payments: [{
           order_id: '',
-          payment_method: 'Razorpay',
+          payment_method: 'Cashfree',
           payment_status: 'completed',
           transaction_reference: paymentId,
           paid_amount: upfront
@@ -474,56 +448,17 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
       navigateTo('orders');
     };
 
-    if (typeof window !== 'undefined' && window.Razorpay) {
-      try {
-        const options = {
-          key: razorpayKey,
-          amount: Math.round(upfront * 100), // Upfront reservation in paise
-          currency: 'INR',
-          name: 'TimeToMeal Campus Canteen',
-          description: `Meal Reservation Upfront Payment (Ref: #${orderCode})`,
-          image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=200',
-          handler: function (response: any) {
-            const paymentId = response.razorpay_payment_id || `pay_${Math.random().toString(36).substr(2, 9)}`;
-            processSuccessfulPayment(paymentId);
-          },
-          prefill: {
-            name: studentProfile?.full_name || 'Student User',
-            email: user.email || 'student@campus.edu',
-            contact: studentProfile?.phone_number || '9876543210'
-          },
-          notes: {
-            student_id: user.id,
-            register_number: studentProfile?.register_number || 'REG-USER',
-            hostel: studentProfile?.hostel_name || 'Hostel',
-            order_code: orderCode
-          },
-          theme: {
-            color: '#059669' // Emerald theme
-          },
-          modal: {
-            ondismiss: function() {
-              console.log('Razorpay modal closed');
-            }
-          }
-        };
-
-        const rzp = new window.Razorpay(options);
-        rzp.open();
-      } catch (err) {
-        console.error('Razorpay invocation error:', err);
-        const fallbackPaymentId = `pay_rzp_${Math.random().toString(36).substr(2, 9)}`;
-        processSuccessfulPayment(fallbackPaymentId);
-      }
-    } else {
-      const fallbackPaymentId = `pay_rzp_${Math.random().toString(36).substr(2, 9)}`;
-      processSuccessfulPayment(fallbackPaymentId);
-    }
+    // Open the high-fidelity Cashfree payments checkout modal
+    setCashfreeModalAmount(upfront);
+    setCashfreeModalCallback(() => processSuccessfulPayment);
+    setCashfreeModalDescription(`Meal Reservation Payment (Ref: #${orderCode})`);
+    setCashfreeModalOrderCode(orderCode);
+    setIsCashfreeModalOpen(true);
   };
 
   const finalizeOrder = () => {
-    if (paymentMethod === 'razorpay') {
-      handleRazorpayCheckout();
+    if (paymentMethod === 'cashfree') {
+      handleCashfreeCheckout();
       return;
     }
 
@@ -718,15 +653,6 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
             <AlertCircle className="w-5 h-5 text-slate-900 dark:text-white" />
           </a>
 
-          {/* Settings Button */}
-          <button 
-            onClick={() => navigateTo('settings')}
-            className="w-10 h-10 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-white rounded-full flex items-center justify-center transition-colors border border-slate-100 dark:border-slate-800 shadow-sm"
-            title="Settings"
-          >
-            <Settings className="w-4.5 h-4.5 text-slate-900 dark:text-white" />
-          </button>
-
           {/* Circular Bell Button */}
           <div className="w-10 h-10 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-full shadow-sm flex items-center justify-center">
             <NotificationBell 
@@ -756,7 +682,7 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
       )}
 
       {/* Main Tab Renderers */}
-      <main className={`max-w-2xl mx-auto w-full ${activeTab === 'cart' ? 'flex-1 flex flex-col min-h-0' : ''}`}>
+      <main className={`max-w-2xl mx-auto w-full ${(activeTab === 'cart' || activeTab === 'orders' || activeTab === 'history') ? 'flex-1 flex flex-col min-h-0' : ''}`}>
         {/* DEDICATED FULL SEARCH PAGE VIEW */}
         {activeTab === 'search' && (
           <div className="px-5 pt-3 space-y-4 animate-in fade-in duration-300 pb-24">
@@ -1444,7 +1370,7 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
                             <span>₹{order.total_amount}</span>
                           </div>
                           <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
-                            <span>Upfront Paid (Razorpay / UPI)</span>
+                            <span>Upfront Paid (Cashfree / UPI)</span>
                             <span>₹{order.paid_amount || 0}</span>
                           </div>
                           <div className="flex justify-between text-slate-950 dark:text-white font-black text-sm pt-2 border-t border-dashed border-gray-200 dark:border-slate-800">
@@ -1617,10 +1543,10 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
                         {paymentStep === 'options' && (
                           <div className="space-y-4">
                             <div className="bg-gray-50 dark:bg-slate-900 p-4 rounded-[12px] border border-gray-100 dark:border-slate-800">
-                               <p className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-3">Pay securely with Razorpay</p>
+                               <p className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-3">Pay securely with Cashfree Payments</p>
                                <button
                                  onClick={() => {
-                                    handleRazorpayCheckoutForExistingOrder(payOrder!.id, amountDue);
+                                    handleCashfreeCheckoutForExistingOrder(payOrder!.id, amountDue);
                                  }}
                                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-[12px] shadow-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] text-sm"
                                >
@@ -1804,16 +1730,20 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
             ) : (
               /* UNIFIED ORDERS LIST (SCROLLABLE VIEW) */
               <div className="flex-1 flex flex-col min-h-0 bg-gray-50 dark:bg-slate-950">
-                <div className="px-5 py-3.5 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 flex flex-col gap-1.5 shadow-sm shrink-0 sticky top-0 z-10">
-                  <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Active Orders</h2>
-                  <div className="flex">
-                    <span className="bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-400 text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1.5">
-                      🏠 TIMETOMEAL MAIN CANTEEN
-                    </span>
+                <div className="px-5 py-3.5 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 flex items-center gap-4 shadow-sm shrink-0 sticky top-0 z-10">
+                  <button 
+                    onClick={() => navigateTo('home')}
+                    className="w-10 h-10 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-full flex items-center justify-center transition-all border border-slate-150/40 dark:border-slate-800 shadow-sm"
+                    title="Back to Home"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <div>
+                    <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Active Orders</h2>
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4 max-w-xl mx-auto w-full pb-36 no-scrollbar">
+                <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4 max-w-xl mx-auto w-full pb-36 scroll-smooth overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
                   {orders.filter(o => o.student_id === user.id).length === 0 ? (
                     <div className="text-center mt-20 p-6 bg-white dark:bg-slate-900 rounded-[12px] border border-gray-100 dark:border-slate-800 shadow-sm">
                       <div className="w-16 h-16 bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -2009,35 +1939,9 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
                 </div>
 
                 <div className="bg-white dark:bg-slate-900 p-4 rounded-[12px] shadow-sm border border-gray-100 dark:border-slate-800">
-                  <div className="flex justify-between items-center mb-3">
+                  <div className="flex justify-between items-center">
                      <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">Total Amount</span>
-                     <span className="text-lg font-bold text-slate-900 dark:text-white">₹{total}</span>
-                  </div>
-                  
-                  <div className="border-t border-gray-100 dark:border-slate-800 pt-3 mt-3">
-                    <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 mb-2 uppercase tracking-wide">Payment Ratio</p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setPaymentRatio('half')}
-                        className={`flex-1 py-2.5 rounded-[12px] text-xs font-bold transition-all border ${
-                          paymentRatio === 'half'
-                            ? 'bg-emerald-50 border-emerald-600 text-emerald-700 dark:bg-emerald-900/30 dark:border-emerald-500 dark:text-emerald-300'
-                            : 'bg-white border-gray-200 text-gray-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400'
-                        }`}
-                      >
-                        50% Reservation (₹{Math.round(total * 0.5)})
-                      </button>
-                      <button
-                        onClick={() => setPaymentRatio('full')}
-                        className={`flex-1 py-2.5 rounded-[12px] text-xs font-bold transition-all border ${
-                          paymentRatio === 'full'
-                            ? 'bg-emerald-50 border-emerald-600 text-emerald-700 dark:bg-emerald-900/30 dark:border-emerald-500 dark:text-emerald-300'
-                            : 'bg-white border-gray-200 text-gray-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400'
-                        }`}
-                      >
-                        100% Full (₹{total})
-                      </button>
-                    </div>
+                     <span className="text-lg font-bold text-slate-900 dark:text-white text-xl">₹{total}</span>
                   </div>
                 </div>
 
@@ -2057,8 +1961,8 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
                       <input 
                         type="radio" 
                         name="payment_method" 
-                        checked={paymentMethod === 'razorpay'} 
-                        onChange={() => setPaymentMethod('razorpay')}
+                        checked={paymentMethod === 'cashfree'} 
+                        onChange={() => setPaymentMethod('cashfree')}
                         className="w-5 h-5 accent-emerald-600"
                       />
                     </label>
@@ -2082,12 +1986,12 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
                 </div>
 
                 <div className="pt-2">
-                  {paymentMethod === 'razorpay' ? (
+                  {paymentMethod === 'cashfree' ? (
                     <button
-                      onClick={handleRazorpayCheckout}
+                      onClick={handleCashfreeCheckout}
                       className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-[12px] shadow-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] text-sm"
                     >
-                      <CreditCard className="w-4 h-4" /> Pay with Razorpay
+                      <CreditCard className="w-4 h-4" /> Pay with Cashfree Payments
                     </button>
                   ) : (
                     <button
@@ -2237,23 +2141,6 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
                    </button>
                 </div>
              </section>
-
-             {/* Flutter App & Account Settings Entry Tile */}
-             <button 
-               onClick={() => setIsSettingsOpen(true)}
-               className="w-full p-5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-[2rem] shadow-lg shadow-emerald-500/20 flex items-center justify-between transition-all hover:scale-[1.01] active:scale-[0.99]"
-             >
-               <div className="flex items-center gap-3.5">
-                 <div className="p-3 bg-white/20 backdrop-blur-md rounded-2xl text-white">
-                   <Settings className="w-5 h-5" />
-                 </div>
-                 <div className="text-left">
-                   <p className="text-sm font-black tracking-tight">App & Account Settings</p>
-                   <p className="text-[10px] font-bold text-emerald-100 uppercase tracking-wider">Veg Mode, Theme, Payment Methods & Notifications</p>
-                 </div>
-               </div>
-               <ArrowRight className="w-5 h-5 text-white" />
-             </button>
 
              {/* Logout button */}
              <button 
@@ -2488,6 +2375,178 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
         onClose={() => setCancellingOrderId(null)}
         onConfirmCancel={handleConfirmCancelOrder}
       />
+
+      {/* High-Fidelity Cashfree Payments Checkout Modal */}
+      {isCashfreeModalOpen && (
+        <div className="fixed inset-0 z-[200] bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[2rem] overflow-hidden shadow-2xl border border-gray-100 dark:border-slate-800 animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-6 relative">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-[10px] uppercase tracking-widest font-black text-emerald-100">Secured by</p>
+                  <h3 className="text-xl font-black tracking-tight flex items-center gap-1.5">
+                    <span className="text-emerald-300">cashfree</span> payments
+                  </h3>
+                </div>
+                <button 
+                  onClick={() => setIsCashfreeModalOpen(false)}
+                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="mt-6 flex justify-between items-end border-t border-white/10 pt-4">
+                <div className="space-y-0.5">
+                  <p className="text-[10px] text-emerald-100 uppercase tracking-wider font-extrabold">Order ID</p>
+                  <p className="text-sm font-bold font-mono">CF_{cashfreeModalOrderCode || 'T2M_9831'}</p>
+                </div>
+                <div className="text-right space-y-0.5">
+                  <p className="text-[10px] text-emerald-100 uppercase tracking-wider font-extrabold">Amount</p>
+                  <p className="text-2xl font-black">₹{cashfreeModalAmount}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content Body */}
+            <div className="p-6 space-y-5">
+              <p className="text-xs text-gray-500 font-bold dark:text-slate-400">{cashfreeModalDescription || 'Campus Meal Reservation Payment'}</p>
+
+              {/* Payment Methods Tabs */}
+              <div className="grid grid-cols-3 gap-2 p-1 bg-gray-50 dark:bg-slate-850 rounded-2xl border border-gray-100 dark:border-slate-800">
+                {(['upi', 'card', 'netbanking'] as const).map((method) => (
+                  <button
+                    key={method}
+                    onClick={() => setCashfreeSelectedMethod(method)}
+                    className={`py-2 text-xs font-black uppercase tracking-wider rounded-xl transition-all ${
+                      cashfreeSelectedMethod === method
+                        ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                        : 'text-gray-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                    }`}
+                  >
+                    {method === 'upi' ? 'UPI' : method === 'card' ? 'Card' : 'Net Bank'}
+                  </button>
+                ))}
+              </div>
+
+              {/* Selection view */}
+              <div className="space-y-4">
+                {cashfreeSelectedMethod === 'upi' && (
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Popular UPI Apps</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {['Google Pay', 'PhonePe', 'Paytm', 'BHIM UPI'].map((app) => (
+                        <button
+                          key={app}
+                          onClick={() => {
+                            setCashfreePaymentLoading(true);
+                            setTimeout(() => {
+                              setCashfreePaymentLoading(false);
+                              setIsCashfreeModalOpen(false);
+                              cashfreeModalCallback(`cf_pay_${Math.random().toString(36).substr(2, 9)}`);
+                            }, 1200);
+                          }}
+                          className="p-3 bg-slate-50 hover:bg-slate-100 dark:bg-slate-950 dark:hover:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-2xl flex items-center gap-2.5 transition-all text-left group"
+                        >
+                          <div className="w-7 h-7 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg flex items-center justify-center font-black text-[10px] text-emerald-600">
+                            UPI
+                          </div>
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">{app}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {cashfreeSelectedMethod === 'card' && (
+                  <div className="space-y-3.5">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Enter Card Details</p>
+                    <div className="space-y-2.5">
+                      <input 
+                        type="text" 
+                        placeholder="Card Number" 
+                        defaultValue="4315 9821 7731 0924"
+                        className="w-full p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-bold focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+                      />
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <input 
+                          type="text" 
+                          placeholder="MM/YY" 
+                          defaultValue="12/29"
+                          className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-bold focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors text-center"
+                        />
+                        <input 
+                          type="password" 
+                          placeholder="CVV" 
+                          defaultValue="***"
+                          className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-bold focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors text-center"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {cashfreeSelectedMethod === 'netbanking' && (
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Popular Indian Banks</p>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {['SBI', 'HDFC Bank', 'ICICI Bank', 'Axis Bank'].map((bank) => (
+                        <button
+                          key={bank}
+                          onClick={() => {
+                            setCashfreePaymentLoading(true);
+                            setTimeout(() => {
+                              setCashfreePaymentLoading(false);
+                              setIsCashfreeModalOpen(false);
+                              cashfreeModalCallback(`cf_pay_${Math.random().toString(36).substr(2, 9)}`);
+                            }, 1200);
+                          }}
+                          className="p-3 bg-slate-50 hover:bg-slate-100 dark:bg-slate-950 dark:hover:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-2xl flex items-center justify-between transition-all font-bold text-xs text-slate-700 dark:text-slate-300"
+                        >
+                          <span>{bank}</span>
+                          <ChevronRight className="w-4 h-4 text-gray-400" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Pay Button */}
+              <button
+                disabled={cashfreePaymentLoading}
+                onClick={() => {
+                  setCashfreePaymentLoading(true);
+                  setTimeout(() => {
+                    setCashfreePaymentLoading(false);
+                    setIsCashfreeModalOpen(false);
+                    cashfreeModalCallback(`cf_pay_${Math.random().toString(36).substr(2, 9)}`);
+                  }, 1500);
+                }}
+                className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-800/80 text-white font-extrabold rounded-2xl text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-md shadow-emerald-600/10"
+              >
+                {cashfreePaymentLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Processing Payment...
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="w-4.5 h-4.5" />
+                    Pay ₹{cashfreeModalAmount} securely
+                  </>
+                )}
+              </button>
+
+              <div className="flex items-center justify-center gap-1.5 text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                <span>100% PCI-DSS compliant payment gateway</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

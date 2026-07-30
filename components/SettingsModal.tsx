@@ -450,26 +450,80 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             
             {/* Top Profile Card */}
             <div className="bg-white dark:bg-slate-900 rounded-[1.75rem] shadow-xs border border-gray-100 dark:border-slate-800/80 overflow-hidden">
-              <div className="p-5 flex items-center justify-between">
+              <div className="p-5 flex items-center justify-between border-b border-gray-100 dark:border-slate-800/80">
                 <div className="flex items-center gap-4">
                   {/* Avatar */}
-                  <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-300 font-black text-2xl flex items-center justify-center shrink-0">
+                  <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-300 font-black text-2xl flex items-center justify-center shrink-0">
                     {studentProfile?.full_name?.[0] || user?.name?.[0] || 'S'}
                   </div>
                   <div>
-                    <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                      {studentProfile?.full_name || user?.name || 'Sanjay'}
+                    <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+                      {studentProfile?.full_name || user?.name || 'Sanjay Kumar'}
                     </h3>
-                    <button 
-                      onClick={() => setActiveSubScreen('edit_profile')}
-                      className="text-xs font-bold text-rose-500 dark:text-rose-400 hover:underline inline-flex items-center gap-0.5 mt-0.5"
-                    >
-                      Edit profile <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
+                    <p className="text-xs font-bold text-slate-400 mt-0.5">
+                      {studentProfile?.register_number || studentProfile?.roll_number || '2024-CS-019'}
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setActiveSubScreen('edit_profile')}
+                  className="px-4 py-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-850 dark:hover:bg-slate-800 text-xs font-bold text-emerald-600 dark:text-emerald-400 rounded-xl transition-all inline-flex items-center gap-1 border border-slate-150/40 dark:border-slate-800"
+                >
+                  <Edit2 className="w-3.5 h-3.5" /> Edit Profile
+                </button>
+              </div>
+
+              {/* Complete Profile Details Grid */}
+              <div className="p-5 bg-slate-50/50 dark:bg-slate-900/40 space-y-4">
+                <div className="flex items-center gap-2 px-1">
+                  <UserIcon className="w-4 h-4 text-emerald-600" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Student Identity Profile</span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3.5">
+                  <div className="bg-white dark:bg-slate-950 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs space-y-1">
+                    <span className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-wider block">College/Campus</span>
+                    <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200 line-clamp-2">
+                      {studentProfile?.college_name || 'KPR College of Arts Science and Research'}
+                    </p>
+                  </div>
+
+                  <div className="bg-white dark:bg-slate-950 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs space-y-1">
+                    <span className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-wider block">Department / Branch</span>
+                    <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200 line-clamp-2">
+                      {studentProfile?.department || 'Computer Science & Engineering'}
+                    </p>
+                  </div>
+
+                  <div className="bg-white dark:bg-slate-950 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs space-y-1">
+                    <span className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-wider block">Roll Number</span>
+                    <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200">
+                      {studentProfile?.roll_number || studentProfile?.register_number || '2024-CS-019'}
+                    </p>
+                  </div>
+
+                  <div className="bg-white dark:bg-slate-950 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs space-y-1">
+                    <span className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-wider block">Year / Section</span>
+                    <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200">
+                      {studentProfile?.year || 'IV Year'} - {studentProfile?.section || 'A'}
+                    </p>
+                  </div>
+
+                  <div className="bg-white dark:bg-slate-950 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs space-y-1">
+                    <span className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-wider block">Mobile Number</span>
+                    <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200">
+                      {studentProfile?.phone_number || studentProfile?.mobile_number || '+91 98765 43210'}
+                    </p>
+                  </div>
+
+                  <div className="bg-white dark:bg-slate-950 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs space-y-1">
+                    <span className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-wider block">Stay Classification</span>
+                    <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200">
+                      {studentProfile?.room_number ? `Hosteller (${studentProfile?.hostel_name || 'Block A'}, Rm ${studentProfile?.room_number})` : 'Day Scholar'}
+                    </p>
                   </div>
                 </div>
               </div>
-
             </div>
 
             {/* App Update Available Card */}
