@@ -8,7 +8,7 @@ import {
   CreditCard, Smartphone, QrCode, Copy, ExternalLink,
   ChevronLeft, ArrowRight, Home, Star, Plus as PlusIcon, Minus, AlertCircle, ShoppingCart as CartIcon, Check,
   Settings, Camera, SlidersHorizontal, Printer, AlertTriangle, Sparkles, Filter,
-  LayoutGrid, Coffee, SunMedium, ChevronDown, CupSoda
+  LayoutGrid, Coffee, SunMedium, ChevronDown, CupSoda, ChevronUp, Store
 } from 'lucide-react';
 import { CANCEL_WINDOW_MS } from '../constants';
 import OrderPlacedPopup from './OrderPlacedPopup';
@@ -61,9 +61,9 @@ const CancellationTimer = ({ createdAt }: { createdAt: string }) => {
   const secs = Math.floor((timeLeft % 60000) / 1000);
 
   return (
-    <div className="flex items-center gap-1 px-2.5 py-1 bg-red-50 text-red-600 rounded-full border border-red-100 animate-pulse">
-      <Clock className="w-2.5 h-2.5" />
-      <span className="text-[8px] font-black uppercase tracking-widest">Cancel: {mins}:{secs.toString().padStart(2, '0')}</span>
+    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100 rounded-full border border-slate-200 dark:border-slate-700 animate-pulse">
+      <Clock className="w-2.5 h-2.5 text-slate-900 dark:text-slate-100" />
+      <span className="text-[8px] font-bold uppercase tracking-widest text-slate-900 dark:text-slate-100">Cancel: {mins}:{secs.toString().padStart(2, '0')}</span>
     </div>
   );
 };
@@ -91,6 +91,8 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
   const [paymentMethod, setPaymentMethod] = useState<string>('razorpay'); // razorpay, upi, cod
   const [paymentRatio, setPaymentRatio] = useState<'half' | 'full'>('half'); // 50% vs 100% upfront
   
+  const [selectedCanteenName, setSelectedCanteenName] = useState<string>('TimeToMeal Main Canteen');
+
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedReceiptOrder, setSelectedReceiptOrder] = useState<Order | null>(null);
@@ -105,6 +107,13 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
   const [paymentScreenOrderId, setPaymentScreenOrderId] = useState<string | null>(null);
   const [paymentStep, setPaymentStep] = useState<'options' | 'qr' | 'upi_id' | 'more' | 'success' | 'failed'>('options');
   const [paymentResultData, setPaymentResultData] = useState<{ paymentId: string; txId: string; amount: number } | null>(null);
+
+  // New Rating and Receipt Page States
+  const [ratingOrderId, setRatingOrderId] = useState<string | null>(null);
+  const [currentRating, setCurrentRating] = useState<number>(0);
+  const [ratingComments, setRatingComments] = useState<string>('');
+  const [showRatingThankYou, setShowRatingThankYou] = useState<boolean>(false);
+  const [receiptPageOrderId, setReceiptPageOrderId] = useState<string | null>(null);
 
   // Browser Notification API Hook
   const {
@@ -353,7 +362,7 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
   };
 
   const handleRazorpayCheckoutForExistingOrder = (orderId: string, amountDue: number) => {
-    const razorpayKey = 'rzp_test_TGS6KrgRk2UAJ0';
+    const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_TJCR2oIU69Zu0j';
     const existingOrder = orders.find(o => o.id === orderId);
     if (!existingOrder) return;
     
@@ -430,7 +439,7 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
   const handleRazorpayCheckout = () => {
     if (cart.length === 0) return;
     const canteenId = menu.length > 0 ? menu[0].canteen_id : 'canteen-1';
-    const razorpayKey = 'rzp_test_TGS6KrgRk2UAJ0';
+    const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_TJCR2oIU69Zu0j';
     const orderCode = Math.floor(1000 + Math.random() * 9000).toString();
 
     const processSuccessfulPayment = (paymentId: string) => {
@@ -620,22 +629,29 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
       if (percent >= 90) {
         setIsConfirmed(true);
         setSliderValue(100);
-        setTimeout(onConfirm, 500);
+        setTimeout(onConfirm, 400);
       }
     };
 
     return (
       <div 
         ref={sliderRef}
-        className="relative h-14 bg-emerald-600 rounded-[12px] overflow-hidden flex items-center justify-center p-1 select-none cursor-grab active:cursor-grabbing shadow-sm w-full"
+        onClick={() => {
+          if (!isConfirmed) {
+            setIsConfirmed(true);
+            setSliderValue(100);
+            setTimeout(onConfirm, 300);
+          }
+        }}
+        className="relative h-14 bg-emerald-600 hover:bg-emerald-700 rounded-[12px] overflow-hidden flex items-center justify-center p-1 select-none cursor-pointer shadow-sm w-full touch-none transition-all"
         onTouchMove={(e) => !isConfirmed && updateSlider(e.touches[0].clientX)}
         onMouseMove={(e) => !isConfirmed && e.buttons === 1 && updateSlider(e.clientX)}
         onMouseUp={() => !isConfirmed && setSliderValue(0)}
         onTouchEnd={() => !isConfirmed && setSliderValue(0)}
       >
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <span className="text-sm font-bold uppercase tracking-wider text-white">
-            {isConfirmed ? 'Processing...' : 'Swipe to Pay'}
+          <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">
+            {isConfirmed ? 'Processing...' : 'Swipe or Tap to Proceed'}
           </span>
         </div>
         <div 
@@ -690,6 +706,26 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
               Complete Profile
             </button>
           )}
+
+          {/* Report Button */}
+          <a 
+            href="https://forms.gle/rW8oeSayeFh1tP5RA"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-10 h-10 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-white rounded-full flex items-center justify-center transition-colors border border-slate-100 dark:border-slate-800 shadow-sm"
+            title="Report Issue / Feedback"
+          >
+            <AlertCircle className="w-5 h-5 text-slate-900 dark:text-white" />
+          </a>
+
+          {/* Settings Button */}
+          <button 
+            onClick={() => navigateTo('settings')}
+            className="w-10 h-10 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-white rounded-full flex items-center justify-center transition-colors border border-slate-100 dark:border-slate-800 shadow-sm"
+            title="Settings"
+          >
+            <Settings className="w-4.5 h-4.5 text-slate-900 dark:text-white" />
+          </button>
 
           {/* Circular Bell Button */}
           <div className="w-10 h-10 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-full shadow-sm flex items-center justify-center">
@@ -933,7 +969,7 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
 
         {/* HOME TAB VIEW */}
         {activeTab === 'home' && (
-          <div className="space-y-5 pt-3 animate-in fade-in duration-500">
+          <div className="space-y-4 pt-2 animate-in fade-in duration-500">
             {/* Clean White Search Bar Container */}
             <div className="px-5">
               <div 
@@ -1002,7 +1038,7 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
                   <h3 className="text-sm font-black text-slate-900 dark:text-white">Categories</h3>
                   <button 
                     onClick={() => navigateTo('search')}
-                    className="text-xs font-black text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-0.5"
+                    className="text-xs font-black text-slate-950 dark:text-white hover:underline flex items-center gap-0.5"
                   >
                     View all <ChevronRight className="w-3.5 h-3.5 stroke-[3px]" />
                   </button>
@@ -1075,7 +1111,7 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
                   </h3>
                   <p className="text-[10px] font-bold text-slate-400">Available fresh at Hostel & Campus canteens</p>
                 </div>
-                <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/80 px-2.5 py-1 rounded-full border border-emerald-100 dark:border-emerald-900">
+                <span className="text-xs font-black text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700">
                   {filteredMenu.length} items available
                 </span>
               </div>
@@ -1201,7 +1237,254 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
         {/* ACTIVE TICKETS VIEW */}
         {(activeTab === 'orders' || activeTab === 'history') && (
           <div className="flex-1 flex flex-col min-h-0 bg-gray-50 dark:bg-slate-950 w-full animate-in slide-in-from-right-4 duration-300">
-            {cancellingPageOrderId ? (
+            {ratingOrderId ? (
+              /* RATE ORDER PAGE */
+              (() => {
+                const order = orders.find(o => o.id === ratingOrderId);
+                return (
+                  <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-slate-950">
+                    <div className="px-4 py-3 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 flex items-center shadow-sm shrink-0 sticky top-0 z-10">
+                      <button 
+                        onClick={() => {
+                          setRatingOrderId(null);
+                          setCurrentRating(0);
+                          setRatingComments('');
+                        }}
+                        className="text-slate-900 dark:text-white font-bold text-sm flex items-center gap-2 hover:text-emerald-600 transition-colors"
+                      >
+                        <ChevronLeft className="w-5 h-5" /> Back
+                      </button>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto px-4 py-6 max-w-md mx-auto w-full pb-24 space-y-6">
+                      <div className="text-center">
+                        <h2 className="text-2xl font-black text-slate-900 dark:text-white">Rate Your Order</h2>
+                        <p className="text-sm text-gray-500 mt-1">Please rate your experience with order #{order?.order_code}</p>
+                      </div>
+
+                      {/* Stars */}
+                      <div className="flex justify-center items-center gap-2.5 py-4">
+                        {[1, 2, 3, 4, 5].map((starValue) => {
+                          const isFilled = starValue <= currentRating;
+                          return (
+                            <button
+                              key={starValue}
+                              type="button"
+                              onClick={() => setCurrentRating(starValue)}
+                              className="focus:outline-none transition-transform active:scale-90"
+                            >
+                              <Star
+                                className={`w-10 h-10 transition-colors ${
+                                  isFilled 
+                                    ? 'fill-amber-400 text-amber-400' 
+                                    : 'text-gray-300 dark:text-slate-700'
+                                }`}
+                              />
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Comments Area */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Comments (Optional)</label>
+                        <textarea
+                          value={ratingComments}
+                          onChange={(e) => setRatingComments(e.target.value)}
+                          placeholder="Tell us what you liked or how we can improve..."
+                          className="w-full p-4 bg-gray-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm focus:outline-none focus:border-emerald-500 min-h-[120px] resize-none"
+                        />
+                      </div>
+
+                      {/* Buttons */}
+                      <div className="grid grid-cols-2 gap-4 pt-4">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRatingOrderId(null);
+                            setCurrentRating(0);
+                            setRatingComments('');
+                          }}
+                          className="py-3.5 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-xl text-sm transition-all text-center"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (currentRating === 0) {
+                              alert('Please select a star rating first!');
+                              return;
+                            }
+                            // Process rating (save to localStorage)
+                            const ratings = JSON.parse(localStorage.getItem('hb_order_ratings') || '{}');
+                            ratings[ratingOrderId!] = {
+                              rating: currentRating,
+                              comments: ratingComments,
+                              timestamp: Date.now()
+                            };
+                            localStorage.setItem('hb_order_ratings', JSON.stringify(ratings));
+                            
+                            setShowRatingThankYou(true);
+                          }}
+                          className="py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm transition-all shadow-md shadow-emerald-600/10 text-center"
+                        >
+                          Submit
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Thank You Popup */}
+                    {showRatingThankYou && (
+                      <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
+                        <div className="bg-white dark:bg-slate-900 max-w-sm w-full rounded-[2rem] shadow-2xl p-6 md:p-8 border border-gray-100 dark:border-slate-800 text-center space-y-5 animate-in zoom-in-95 duration-200">
+                          <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto border-4 border-emerald-100 dark:border-emerald-900/50">
+                            <Star className="w-8 h-8 fill-emerald-600 text-emerald-600 dark:fill-emerald-400 dark:text-emerald-400" />
+                          </div>
+                          <div className="space-y-1.5">
+                            <h3 className="text-xl font-black text-slate-950 dark:text-white">Thank You!</h3>
+                            <p className="text-sm text-gray-500">Your feedback has been submitted successfully.</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowRatingThankYou(false);
+                              setRatingOrderId(null);
+                              setCurrentRating(0);
+                              setRatingComments('');
+                            }}
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl text-sm transition-all"
+                          >
+                            Close
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()
+            ) : receiptPageOrderId ? (
+              /* VIEW RECEIPT PAGE */
+              (() => {
+                const order = orders.find(o => o.id === receiptPageOrderId);
+                if (!order) return null;
+                const remainingAtCounter = Math.max(0, order.total_amount - (order.paid_amount || 0));
+                
+                return (
+                  <div className="flex-1 flex flex-col min-h-0 bg-gray-50 dark:bg-slate-950">
+                    <div className="px-4 py-3 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between shadow-sm shrink-0 sticky top-0 z-10">
+                      <button 
+                        onClick={() => setReceiptPageOrderId(null)}
+                        className="text-slate-900 dark:text-white font-bold text-sm flex items-center gap-2 hover:text-emerald-600 transition-colors"
+                      >
+                        <ChevronLeft className="w-5 h-5" /> Back
+                      </button>
+                      <span className="text-sm font-bold text-slate-900 dark:text-white">Order Receipt</span>
+                      <div className="w-5" />
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto px-4 py-6 max-w-md mx-auto w-full pb-24 space-y-6 no-scrollbar">
+                      <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-3xl p-6 shadow-sm font-mono text-slate-900 dark:text-slate-100 space-y-4">
+                        <div className="text-center space-y-1 font-sans">
+                          <h3 className="text-base font-black tracking-tight text-slate-950 dark:text-white uppercase">TIMETOMEAL CANTEEN</h3>
+                          <p className="text-[10px] text-gray-400 font-bold">Hostel Block Dining Hall</p>
+                          <p className="text-[9px] text-emerald-600 dark:text-emerald-400 font-black uppercase tracking-widest mt-0.5">Official Student Receipt</p>
+                        </div>
+
+                        <p className="text-center text-[10px] text-gray-300 dark:text-slate-700">----------------------------------------</p>
+
+                        <div className="text-center">
+                          <p className="text-[9px] text-gray-400 uppercase tracking-widest font-sans font-bold">TOKEN CODE</p>
+                          <p className="text-4xl font-black text-slate-950 dark:text-white tracking-tight mt-1">#{order.order_code}</p>
+                        </div>
+
+                        <p className="text-center text-[10px] text-gray-300 dark:text-slate-700">----------------------------------------</p>
+
+                        <div className="text-left text-[11px] space-y-2 font-sans">
+                          <div className="flex justify-between">
+                            <span className="text-gray-400 font-bold uppercase tracking-wider">Date & Time:</span>
+                            <span className="text-slate-800 dark:text-slate-200 font-bold">{new Date(order.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-400 font-bold uppercase tracking-wider">Order Status:</span>
+                            <span className="text-emerald-600 dark:text-emerald-400 font-black uppercase">{order.order_status}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-400 font-bold uppercase tracking-wider">Student Name:</span>
+                            <span className="text-slate-900 dark:text-white font-black truncate max-w-[170px]">{order.student_details?.full_name || 'Student'}</span>
+                          </div>
+                          {order.student_details?.register_number && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-400 font-bold uppercase tracking-wider">Register No:</span>
+                              <span className="text-slate-800 dark:text-slate-200 font-bold">{order.student_details.register_number}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <p className="text-center text-[10px] text-gray-300 dark:text-slate-700">----------------------------------------</p>
+
+                        {/* Items Table */}
+                        <div className="text-left text-[11px] space-y-2 font-sans">
+                          {order.order_items?.map((item, idx) => (
+                            <div key={idx} className="flex justify-between items-start">
+                              <div className="flex flex-col">
+                                <span className="text-slate-950 dark:text-white font-black">{item.item_name}</span>
+                                <span className="text-[10px] text-gray-400 font-bold">x{item.quantity} @ ₹{item.price}</span>
+                              </div>
+                              <span className="text-slate-950 dark:text-white font-black">₹{item.price * item.quantity}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <p className="text-center text-[10px] text-gray-300 dark:text-slate-700">----------------------------------------</p>
+
+                        <div className="text-left text-[11px] space-y-1.5 font-sans">
+                          <div className="flex justify-between text-gray-500 font-bold">
+                            <span>Total Bill Amount</span>
+                            <span>₹{order.total_amount}</span>
+                          </div>
+                          <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
+                            <span>Upfront Paid (Razorpay / UPI)</span>
+                            <span>₹{order.paid_amount || 0}</span>
+                          </div>
+                          <div className="flex justify-between text-slate-950 dark:text-white font-black text-sm pt-2 border-t border-dashed border-gray-200 dark:border-slate-800">
+                            <span>DUE AT COUNTER</span>
+                            <span>₹{remainingAtCounter}</span>
+                          </div>
+                        </div>
+
+                        <p className="text-center text-[10px] text-gray-300 dark:text-slate-700">----------------------------------------</p>
+
+                        <div className="text-left text-[11px] space-y-1.5 font-sans font-bold">
+                          <div className="flex justify-between">
+                            <span className="text-gray-400 uppercase tracking-wider">Payment Method:</span>
+                            <span className="text-slate-800 dark:text-slate-200 capitalize">{order.payment_method === 'cod' ? 'Cash' : order.payment_method}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-400 uppercase tracking-wider">Payment Status:</span>
+                            <span className="text-emerald-600 dark:text-emerald-400">{order.paid_amount >= order.total_amount ? 'Fully Paid' : 'Partially Paid'}</span>
+                          </div>
+                        </div>
+
+                        <p className="text-center text-[10px] text-gray-300 dark:text-slate-700">----------------------------------------</p>
+
+                        <div className="space-y-1 font-sans pt-1 text-center">
+                          <p className="text-[11px] font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider">SHOW TOKEN AT COUNTER TO PICK UP</p>
+                          <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest">TimeToMeal Canteen</p>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => window.print()}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2"
+                      >
+                        <Printer className="w-4 h-4" /> Print Receipt
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()
+            ) : cancellingPageOrderId ? (
               /* CANCEL ORDER PAGE */
               (() => {
                 const cancelOrder = orders.find(o => o.id === cancellingPageOrderId);
@@ -1409,31 +1692,42 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
                           </div>
                           <span className={`px-3 py-1 text-xs font-bold rounded-full border ${
                               order.order_status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800' :
-                              order.order_status === 'cancelled' ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800' :
+                              order.order_status === 'cancelled' ? 'bg-slate-100 text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700' :
                               order.order_status === 'preparing' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800' :
                               order.order_status === 'ready' ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800' :
-                              'bg-gray-50 text-gray-700 border-gray-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
+                              'bg-gray-50 text-gray-700 border-gray-200 dark:bg-slate-800 dark:text-slate-300'
                             }`}>
                               {order.order_status.charAt(0).toUpperCase() + order.order_status.slice(1)}
                           </span>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100 dark:border-slate-800">
+                        <div className="grid grid-cols-2 gap-4 pt-3 border-t border-gray-100 dark:border-slate-800">
                           <div>
-                            <p className="text-[11px] text-gray-500 font-medium">Date & Time</p>
-                            <p className="text-sm font-semibold text-slate-900 dark:text-slate-200">{new Date(order.created_at).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, month: 'short', day: 'numeric' })}</p>
+                            <p className="text-[11px] text-gray-500 font-bold uppercase tracking-wider">Date & Time</p>
+                            <p className="text-sm font-bold text-slate-900 dark:text-slate-200 mt-1">
+                              {new Date(order.created_at).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, month: 'short', day: 'numeric' })}
+                            </p>
                           </div>
                           <div>
-                            <p className="text-[11px] text-gray-500 font-medium">Estimated Ready Time</p>
-                            <p className="text-sm font-semibold text-slate-900 dark:text-slate-200">{order.estimated_ready_time ? new Date(order.estimated_ready_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Calculating...'}</p>
+                            <p className="text-[11px] text-gray-500 font-bold uppercase tracking-wider">Estimated Cancel Time</p>
+                            <div className="mt-1">
+                              {canCancel ? (
+                                <CancellationTimer createdAt={order.created_at} />
+                              ) : (
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-full border border-slate-200 dark:border-slate-700 font-mono text-[9px] font-bold">
+                                  <Clock className="w-3.5 h-3.5 text-slate-500" />
+                                  <span>Cancel: Expired</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                           <div>
-                            <p className="text-[11px] text-gray-500 font-medium">Pickup Counter</p>
-                            <p className="text-sm font-semibold text-slate-900 dark:text-slate-200">Main Delivery (A1)</p>
+                            <p className="text-[11px] text-gray-500 font-bold uppercase tracking-wider">Canteen Name</p>
+                            <p className="text-sm font-bold text-slate-900 dark:text-slate-200 mt-1">TimeToMeal Main Canteen</p>
                           </div>
                           <div>
-                            <p className="text-[11px] text-gray-500 font-medium">Order Type</p>
-                            <p className="text-sm font-semibold text-slate-900 dark:text-slate-200 capitalize">{order.order_type.replace('_', ' ')}</p>
+                            <p className="text-[11px] text-gray-500 font-bold uppercase tracking-wider">Order Type</p>
+                            <p className="text-sm font-bold text-slate-900 dark:text-slate-200 mt-1 capitalize">{order.order_type.replace('_', ' ')}</p>
                           </div>
                         </div>
                       </div>
@@ -1477,76 +1771,50 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3 pt-2">
-                        <button 
-                          onClick={() => setSelectedReceiptOrder(order)}
-                          className="bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-bold py-3.5 rounded-[12px] text-sm transition-all"
-                        >
-                          View Receipt
-                        </button>
-                        {isFullyPaid ? (
-                          <button disabled className="bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-500 dark:border-emerald-800/50 font-bold py-3.5 rounded-[12px] text-sm opacity-80 cursor-default">
-                            Already Paid
+                      <div className="grid grid-cols-2 gap-3.5 pt-4">
+                        {canCancel ? (
+                          <button 
+                            onClick={() => setCancellingPageOrderId(order.id)}
+                            className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-bold py-3.5 rounded-xl text-sm transition-all text-center flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700"
+                          >
+                            <Trash2 className="w-4 h-4 text-slate-900 dark:text-white" />
+                            Cancel Order
                           </button>
                         ) : (
                           <button 
-                            onClick={() => {
-                              setPaymentScreenOrderId(order.id);
-                              setPaymentStep('options');
-                            }}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-[12px] text-sm transition-all shadow-sm active:scale-[0.98]"
+                            disabled
+                            className="bg-gray-50 dark:bg-slate-900 text-gray-400 dark:text-slate-600 font-bold py-3.5 rounded-xl text-sm border border-gray-100 dark:border-slate-800 text-center cursor-not-allowed flex items-center justify-center gap-2"
                           >
-                            {order.payment_method === 'cod' ? 'Pay Now' : 'Pay Remaining'}
+                            <Trash2 className="w-4 h-4" />
+                            Cancel Expired
                           </button>
                         )}
+                        <button 
+                          onClick={() => setReceiptPageOrderId(order.id)}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl text-sm transition-all text-center flex items-center justify-center gap-2 shadow-sm"
+                        >
+                          <Printer className="w-4 h-4" />
+                          View Receipt
+                        </button>
                       </div>
-
-                      {/* Cancellation Timer & Cancel Button Section */}
-                      {order.order_status === 'pending' && (
-                        <div className="pt-2">
-                          {canCancel ? (
-                            <div className="bg-red-50/90 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 rounded-[14px] p-4 space-y-3 shadow-sm">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <Clock className="w-4 h-4 text-red-600 dark:text-red-400 animate-pulse" />
-                                  <span className="text-xs font-black text-red-900 dark:text-red-200 uppercase tracking-wider">
-                                    Cancellation Window
-                                  </span>
-                                </div>
-                                <CancellationTimer createdAt={order.created_at} />
-                              </div>
-                              <p className="text-xs text-red-700 dark:text-red-300 font-medium leading-relaxed">
-                                You can cancel this order within 20 minutes of placement. Select a reason on the next screen.
-                              </p>
-                              <button
-                                onClick={() => setCancellingPageOrderId(order.id)}
-                                className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-[12px] text-xs uppercase tracking-wider transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
-                              >
-                                <XCircle className="w-4 h-4" /> Cancel This Order
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="bg-gray-100 dark:bg-slate-800/60 border border-gray-200 dark:border-slate-700 rounded-[12px] p-3 text-center">
-                              <p className="text-xs font-semibold text-gray-500 dark:text-slate-400">
-                                ⏱ 20-minute cancellation window expired for this order
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      )}
                     </div>
                   </div>
                 );
               })()
             ) : (
-              /* ACTIVE ORDERS LIST (TRACKING VIEW) */
+              /* UNIFIED ORDERS LIST (SCROLLABLE VIEW) */
               <div className="flex-1 flex flex-col min-h-0 bg-gray-50 dark:bg-slate-950">
-                <div className="px-4 py-3 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 flex items-center shadow-sm shrink-0 sticky top-0 z-10">
-                  <span className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">Active Orders</span>
+                <div className="px-5 py-3.5 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 flex flex-col gap-1.5 shadow-sm shrink-0 sticky top-0 z-10">
+                  <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Active Orders</h2>
+                  <div className="flex">
+                    <span className="bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-400 text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1.5">
+                      🏠 TIMETOMEAL MAIN CANTEEN
+                    </span>
+                  </div>
                 </div>
-                
-                <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 pb-24 max-w-xl mx-auto w-full no-scrollbar">
-                  {orders.length === 0 ? (
+
+                <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4 max-w-xl mx-auto w-full pb-36 no-scrollbar">
+                  {orders.filter(o => o.student_id === user.id).length === 0 ? (
                     <div className="text-center mt-20 p-6 bg-white dark:bg-slate-900 rounded-[12px] border border-gray-100 dark:border-slate-800 shadow-sm">
                       <div className="w-16 h-16 bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500 rounded-full flex items-center justify-center mx-auto mb-4">
                         <Utensils className="w-8 h-8" />
@@ -1561,101 +1829,66 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
                       </button>
                     </div>
                   ) : (
-                    orders.filter(o => o.order_status !== 'delivered' && o.order_status !== 'cancelled').map(order => {
-                      // Horizontal Progress Tracker logic
-                      // Placed -> Confirmed -> Preparing -> Ready
-                      const steps = ['pending', 'confirmed', 'preparing', 'ready'];
-                      let currentStepIdx = steps.indexOf(order.order_status);
-                      if (currentStepIdx === -1) currentStepIdx = 0; // Default to pending if unknown
+                    orders.filter(o => o.student_id === user.id).sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map(order => {
+                      const formattedDate = new Date(order.created_at).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                      });
 
                       return (
-                        <div key={order.id} className="bg-white dark:bg-slate-900 p-4 rounded-[12px] shadow-sm border border-gray-100 dark:border-slate-800">
-                          <div className="flex justify-between items-start mb-4">
-                            <div>
-                              <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Order Token</p>
-                              <h3 className="text-xl font-black text-slate-900 dark:text-white">#{order.order_code}</h3>
+                        <div key={order.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-xs space-y-4">
+                          {/* Header Row */}
+                          <div className="flex justify-between items-start">
+                            <div className="space-y-1">
+                              <p className="text-[10px] text-gray-400 dark:text-slate-500 font-extrabold uppercase tracking-wider">TOKEN NUMBER</p>
+                              <p className="text-xl font-black text-slate-900 dark:text-white">#{order.order_code}</p>
                             </div>
-                            <div className="text-right">
-                              <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Status</p>
-                              <p className="text-sm font-bold text-emerald-600 capitalize">{order.order_status}</p>
-                            </div>
-                          </div>
-
-                          {/* Progress Tracker */}
-                          <div className="mb-6 relative mt-4">
-                            <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-100 dark:bg-slate-800 -translate-y-1/2 rounded-full"></div>
-                            <div className="absolute top-1/2 left-0 h-1 bg-emerald-500 -translate-y-1/2 rounded-full transition-all duration-500" style={{ width: `${(currentStepIdx / (steps.length - 1)) * 100}%` }}></div>
-                            
-                            <div className="relative flex justify-between">
-                              {steps.map((step, idx) => {
-                                const isCompleted = idx < currentStepIdx;
-                                const isCurrent = idx === currentStepIdx;
-                                return (
-                                  <div key={step} className="flex flex-col items-center">
-                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center z-10 transition-colors duration-300 ${
-                                      isCompleted ? 'bg-emerald-500 text-white' : 
-                                      isCurrent ? 'bg-emerald-500 text-white border-2 border-white dark:border-slate-900 shadow-md ring-2 ring-emerald-500/20' : 
-                                      'bg-gray-200 dark:bg-slate-700 text-transparent'
-                                    }`}>
-                                      {isCompleted && <Check className="w-3 h-3 stroke-[3]" />}
-                                      {isCurrent && <div className="w-2 h-2 bg-white rounded-full"></div>}
-                                    </div>
-                                    <span className={`text-[9px] font-bold mt-1.5 capitalize absolute -bottom-4 transition-colors ${
-                                      isCompleted || isCurrent ? 'text-slate-900 dark:text-white' : 'text-gray-400 dark:text-slate-500'
-                                    }`}>
-                                      {step === 'pending' ? 'placed' : step}
-                                    </span>
-                                  </div>
-                                );
-                              })}
+                            <div className="space-y-1 text-right">
+                              <p className="text-[10px] text-gray-400 dark:text-slate-500 font-extrabold uppercase tracking-wider">TOTAL PRICE</p>
+                              <p className="text-xl font-black text-slate-900 dark:text-white">₹{order.total_amount}</p>
                             </div>
                           </div>
 
-                          <div className="flex justify-between items-center py-3 border-y border-gray-100 dark:border-slate-800 mb-4 mt-6">
-                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Estimated Ready Time</span>
-                            <span className="text-sm font-bold text-slate-900 dark:text-white">
-                              {order.estimated_ready_time ? new Date(order.estimated_ready_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '...'}
+                          {/* Info Row: Date and Status Badge */}
+                          <div className="flex justify-between items-center py-2 border-t border-slate-100 dark:border-slate-800">
+                            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-bold">
+                              <Clock className="w-4 h-4 text-slate-400" />
+                              <span>{formattedDate}</span>
+                            </div>
+                            <span className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-full border ${
+                              order.order_status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400' :
+                              order.order_status === 'cancelled' ? 'bg-slate-100 text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700' :
+                              order.order_status === 'preparing' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-400' :
+                              order.order_status === 'ready' ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-400' :
+                              'bg-gray-50 text-gray-700 border-gray-200 dark:bg-slate-800 dark:text-slate-300'
+                            }`}>
+                              {order.order_status}
                             </span>
                           </div>
 
-                          <button
-                            onClick={() => setSelectedDetailsOrderId(order.id)}
-                            className="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 dark:text-emerald-400 font-bold py-3 rounded-[12px] text-sm transition-all border border-emerald-100 dark:border-emerald-800/50"
-                          >
-                            View Order Details
-                          </button>
+                          {/* Action Buttons Row */}
+                          <div className="grid grid-cols-2 gap-3.5 pt-1">
+                            <button
+                              onClick={() => setRatingOrderId(order.id)}
+                              className="bg-white hover:bg-amber-50/50 dark:bg-slate-900 dark:hover:bg-amber-950/20 border border-amber-400 dark:border-amber-500 text-amber-600 dark:text-amber-400 font-extrabold py-3 rounded-2xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-xs"
+                            >
+                              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 animate-pulse" />
+                              Rate Order
+                            </button>
+                            <button
+                              onClick={() => setSelectedDetailsOrderId(order.id)}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3 rounded-2xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.98]"
+                            >
+                              <Utensils className="w-3.5 h-3.5" />
+                              View Details
+                            </button>
+                          </div>
                         </div>
                       );
                     })
-                  )}
-
-                  {orders.some(o => o.order_status === 'delivered' || o.order_status === 'cancelled') && (
-                    <div className="pt-6">
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight mb-4 px-2">Past Orders</h4>
-                      <div className="space-y-3">
-                        {orders.filter(o => o.order_status === 'delivered' || o.order_status === 'cancelled').map(order => (
-                          <div key={order.id} className="bg-white dark:bg-slate-900 p-4 rounded-[12px] shadow-sm border border-gray-100 dark:border-slate-800 opacity-75 hover:opacity-100 transition-opacity">
-                            <div className="flex justify-between items-start mb-3">
-                              <div>
-                                <h3 className="text-lg font-bold text-slate-900 dark:text-white">#{order.order_code}</h3>
-                                <p className="text-xs text-gray-500 font-medium mt-0.5">{new Date(order.created_at).toLocaleDateString()}</p>
-                              </div>
-                              <span className={`px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full border ${
-                                order.order_status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'
-                              }`}>
-                                {order.order_status}
-                              </span>
-                            </div>
-                            <button
-                              onClick={() => setSelectedDetailsOrderId(order.id)}
-                              className="w-full bg-gray-50 hover:bg-gray-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-bold py-2.5 rounded-[12px] text-xs transition-all border border-gray-200 dark:border-slate-700 mt-2"
-                            >
-                              View Order Details
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
                   )}
                 </div>
               </div>
@@ -1751,7 +1984,7 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
                     </div>
 
                     {/* Bottom Summary & Swipe to Pay */}
-                    <div className="shrink-0 pt-2 pb-20 space-y-4 bg-gray-50 dark:bg-slate-950">
+                    <div className="shrink-0 pt-2 pb-32 space-y-4 bg-gray-50 dark:bg-slate-950">
                       <div className="bg-white dark:bg-slate-900 p-4 rounded-[12px] shadow-sm flex justify-between items-center border border-gray-100 dark:border-slate-800">
                         <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">Total Amount</span>
                         <span className="text-lg font-bold text-slate-900 dark:text-white">₹{total}</span>
@@ -1765,7 +1998,7 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
             )}
 
             {checkoutStep === 'billing' && (
-              <div className="flex-1 flex flex-col min-h-0 space-y-4 animate-in slide-in-from-right-4 pb-24">
+              <div className="flex-1 overflow-y-auto min-h-0 space-y-4 animate-in slide-in-from-right-4 pb-36 pr-1 no-scrollbar">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
                     <button onClick={() => setCheckoutStep('basket')} className="w-8 h-8 rounded-full bg-white dark:bg-slate-900 flex items-center justify-center text-slate-700 dark:text-slate-200 shadow-sm border border-gray-100 dark:border-slate-800">
@@ -1848,7 +2081,7 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
                   </div>
                 </div>
 
-                <div className="pt-4">
+                <div className="pt-2">
                   {paymentMethod === 'razorpay' ? (
                     <button
                       onClick={handleRazorpayCheckout}
@@ -1869,7 +2102,7 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
             )}
 
             {checkoutStep === 'payment' && (
-              <div className="flex-1 flex flex-col items-center justify-center space-y-6 animate-in zoom-in-95 bg-white dark:bg-slate-900 rounded-[12px] p-6 shadow-sm border border-gray-100 dark:border-slate-800 max-w-sm mx-auto my-auto mt-10 w-full">
+              <div className="flex-1 overflow-y-auto min-h-0 pb-36 space-y-6 animate-in zoom-in-95 bg-white dark:bg-slate-900 rounded-[12px] p-6 shadow-sm border border-gray-100 dark:border-slate-800 max-w-sm mx-auto my-auto mt-4 w-full no-scrollbar">
                  <div className="w-20 h-20 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-500 rounded-full flex items-center justify-center border-4 border-emerald-100 dark:border-emerald-800/50">
                     <CheckCircle className="w-10 h-10" />
                  </div>
@@ -2170,7 +2403,7 @@ const StudentView: React.FC<StudentViewProps> = ({ user, orders, menu, onUpdateO
               <button
                 key={item.tab}
                 onClick={() => navigateTo(item.tab as StudentTab)}
-                className="bg-emerald-100/90 dark:bg-emerald-950/90 text-emerald-700 dark:text-emerald-300 font-extrabold px-4 py-2 rounded-full flex items-center gap-2 transition-all shadow-sm"
+                className="bg-slate-900/10 dark:bg-white/10 text-slate-900 dark:text-slate-100 font-extrabold px-4 py-2 rounded-full flex items-center gap-2 transition-all shadow-sm"
               >
                 <div className="relative">
                   {item.icon}

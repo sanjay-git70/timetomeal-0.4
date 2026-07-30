@@ -155,7 +155,7 @@ const WalkInOrderView: React.FC<WalkInOrderViewProps> = ({ user, menu, onBack, o
 
     if (typeof window !== 'undefined' && (window as any).Razorpay) {
       const options = {
-        key: 'rzp_test_TGS6KrgRk2UAJ0',
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_TJCR2oIU69Zu0j',
         amount: Math.round(total * 100),
         currency: 'INR',
         name: 'TimeToMeal Counter POS',

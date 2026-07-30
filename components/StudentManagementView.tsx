@@ -177,7 +177,7 @@ export const StudentManagementView: React.FC = () => {
   // Navigation State
   const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
   const [selectedStudent, setSelectedStudent] = useState<StudentRecord | null>(null);
-  const [detailTab, setDetailTab] = useState<'dashboard' | 'orders' | 'reports' | 'profile'>('dashboard');
+  const [detailTab, setDetailTab] = useState<'dashboard' | 'orders' | 'reports' | 'profile' | 'activity' | 'location' | 'payments'>('dashboard');
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
@@ -288,8 +288,11 @@ export const StudentManagementView: React.FC = () => {
           {[
             { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
             { id: 'orders', label: 'Order History', icon: ShoppingBag },
-            { id: 'reports', label: 'Activity Reports', icon: FileText },
-            { id: 'profile', label: 'Profile & Location Access', icon: User },
+            { id: 'reports', label: 'Reports', icon: FileText },
+            { id: 'profile', label: 'Profile', icon: User },
+            { id: 'activity', label: 'Activity Timeline', icon: Clock },
+            { id: 'location', label: 'Location Access', icon: MapPin },
+            { id: 'payments', label: 'Payment History', icon: CreditCard },
           ].map((t) => {
             const Icon = t.icon;
             const isActive = detailTab === t.id;
@@ -377,6 +380,12 @@ export const StudentManagementView: React.FC = () => {
                   <td className="p-3 text-right font-black text-emerald-600">₹180</td>
                   <td className="p-3"><span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">Delivered</span></td>
                 </tr>
+                <tr className="font-medium">
+                  <td className="p-3 font-mono font-bold text-slate-950 dark:text-white">#TM-8740</td>
+                  <td className="p-3 text-slate-700 dark:text-slate-300">{selectedStudent.favoriteCanteen}</td>
+                  <td className="p-3 text-right font-black text-emerald-600">₹240</td>
+                  <td className="p-3"><span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">Delivered</span></td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -395,68 +404,114 @@ export const StudentManagementView: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 4: PROFILE & LOCATION ACCESS */}
+        {/* TAB 4: PROFILE */}
         {detailTab === 'profile' && (
-          <div className="space-y-6 text-xs">
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
-              <h3 className="font-black text-sm text-slate-950 dark:text-white">Academic Profile & Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1">
-                  <p><strong className="text-slate-950 dark:text-white">College Node:</strong> {selectedStudent.college}</p>
-                  <p><strong className="text-slate-950 dark:text-white">Department:</strong> {selectedStudent.department}</p>
-                  <p><strong className="text-slate-950 dark:text-white">Year:</strong> {selectedStudent.year}</p>
-                  <p><strong className="text-slate-950 dark:text-white">Reg Date:</strong> {selectedStudent.registrationDate}</p>
-                </div>
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4 text-xs">
+            <h3 className="font-black text-sm text-slate-950 dark:text-white">Academic Profile & Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1">
+                <p><strong className="text-slate-950 dark:text-white">College Node:</strong> {selectedStudent.college}</p>
+                <p><strong className="text-slate-950 dark:text-white">Department:</strong> {selectedStudent.department}</p>
+                <p><strong className="text-slate-950 dark:text-white">Year:</strong> {selectedStudent.year}</p>
+                <p><strong className="text-slate-950 dark:text-white">Reg Date:</strong> {selectedStudent.registrationDate}</p>
+              </div>
 
-                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1">
-                  <p><strong className="text-slate-950 dark:text-white">Email:</strong> {selectedStudent.collegeEmail}</p>
-                  <p><strong className="text-slate-950 dark:text-white">Phone:</strong> {selectedStudent.phone}</p>
-                  <p><strong className="text-slate-950 dark:text-white">Status:</strong> <span className="font-bold text-emerald-600">{selectedStudent.status}</span></p>
-                </div>
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1">
+                <p><strong className="text-slate-950 dark:text-white">Email:</strong> {selectedStudent.collegeEmail}</p>
+                <p><strong className="text-slate-950 dark:text-white">Phone:</strong> {selectedStudent.phone}</p>
+                <p><strong className="text-slate-950 dark:text-white">Status:</strong> <span className="font-bold text-emerald-600">{selectedStudent.status}</span></p>
               </div>
             </div>
+          </div>
+        )}
 
-            {/* LOCATION ACCESS & GEOFENCE STATUS */}
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-black text-sm text-slate-950 dark:text-white flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-emerald-500" /> Location Access & Geofence Status
-                  </h3>
-                  <p className="text-slate-500">Real-time GPS proximity validation for campus food ordering.</p>
+        {/* TAB 5: ACTIVITY TIMELINE */}
+        {detailTab === 'activity' && (
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4 text-xs">
+            <h3 className="font-black text-sm text-slate-950 dark:text-white">Student Event & Activity Timeline</h3>
+            <div className="relative border-l-2 border-slate-200 dark:border-slate-800 ml-3 space-y-6 py-2">
+              {[
+                { time: 'Today, 08:30 AM', title: 'Placed Food Order #TM-8821', desc: 'Ordered Breakfast Combo at Gourmet Campus Diner' },
+                { time: 'Today, 08:29 AM', title: 'Geofence Validation Passed', desc: 'GPS verified within 60m of campus canteen' },
+                { time: 'Yesterday, 01:15 PM', title: 'Placed Food Order #TM-8740', desc: 'Ordered Special Veg Thali' },
+                { time: selectedStudent.registrationDate, title: 'Registered Account', desc: `Student registered under ${selectedStudent.college}` },
+              ].map((ev, idx) => (
+                <div key={idx} className="relative pl-6">
+                  <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-emerald-500 ring-4 ring-white dark:ring-slate-900" />
+                  <p className="font-bold text-slate-950 dark:text-white">{ev.title}</p>
+                  <p className="text-slate-500 mt-0.5">{ev.desc}</p>
+                  <span className="text-[10px] text-slate-400 font-mono mt-1 block">{ev.time}</span>
                 </div>
+              ))}
+            </div>
+          </div>
+        )}
 
-                {/* GREEN BADGE OR RED BADGE */}
-                <span className={`px-3 py-1.5 rounded-xl font-black text-xs uppercase tracking-wider ${
-                  selectedStudent.isWithinGeofence ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400' : 'bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-400'
-                }`}>
-                  {selectedStudent.isWithinGeofence ? '● Inside Campus (Green Badge)' : '● Outside Campus (Red Badge)'}
-                </span>
+        {/* TAB 6: LOCATION ACCESS */}
+        {detailTab === 'location' && (
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-6 text-xs">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-black text-sm text-slate-950 dark:text-white flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-emerald-500" /> Location Access & Geofence Status
+                </h3>
+                <p className="text-slate-500">Real-time GPS proximity validation for campus food ordering.</p>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                  <span className="text-[10px] uppercase font-bold text-slate-400">Assigned College</span>
-                  <p className="text-xs font-bold text-slate-950 dark:text-white mt-1 truncate">{selectedStudent.college}</p>
-                </div>
+              {/* GREEN BADGE OR RED BADGE */}
+              <span className={`px-3 py-1.5 rounded-xl font-black text-xs uppercase tracking-wider ${
+                selectedStudent.isWithinGeofence ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400' : 'bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-400'
+              }`}>
+                {selectedStudent.isWithinGeofence ? '● Inside Campus (Green Badge)' : '● Outside Campus (Red Badge)'}
+              </span>
+            </div>
 
-                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                  <span className="text-[10px] uppercase font-bold text-slate-400">Current GPS</span>
-                  <p className="text-xs font-mono font-bold text-slate-950 dark:text-white mt-1">
-                    {selectedStudent.currentGps.lat.toFixed(4)}, {selectedStudent.currentGps.lng.toFixed(4)}
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                  <span className="text-[10px] uppercase font-bold text-slate-400">Distance to Canteen</span>
-                  <p className="text-xs font-black text-blue-600 mt-1">{selectedStudent.distanceFromCanteenMeters} meters</p>
-                </div>
-
-                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                  <span className="text-[10px] uppercase font-bold text-slate-400">Allowed Radius</span>
-                  <p className="text-xs font-black text-slate-950 dark:text-white mt-1">{selectedStudent.campusCanteenRadiusMeters} meters</p>
-                </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <span className="text-[10px] uppercase font-bold text-slate-400">Assigned College</span>
+                <p className="text-xs font-bold text-slate-950 dark:text-white mt-1 truncate">{selectedStudent.college}</p>
               </div>
+
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <span className="text-[10px] uppercase font-bold text-slate-400">Current GPS</span>
+                <p className="text-xs font-mono font-bold text-slate-950 dark:text-white mt-1">
+                  {selectedStudent.currentGps.lat.toFixed(4)}, {selectedStudent.currentGps.lng.toFixed(4)}
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <span className="text-[10px] uppercase font-bold text-slate-400">Distance to Canteen</span>
+                <p className="text-xs font-black text-blue-600 mt-1">{selectedStudent.distanceFromCanteenMeters} meters</p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <span className="text-[10px] uppercase font-bold text-slate-400">Allowed Radius</span>
+                <p className="text-xs font-black text-slate-950 dark:text-white mt-1">{selectedStudent.campusCanteenRadiusMeters} meters</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 7: PAYMENT HISTORY */}
+        {detailTab === 'payments' && (
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4 text-xs">
+            <h3 className="font-black text-sm text-slate-950 dark:text-white">UPI & Payment Gateway Receipts</h3>
+            <div className="space-y-3">
+              {[
+                { id: 'PAY-901', method: 'Razorpay UPI (GPay)', amount: 180, ref: 'UPI/40921092109', date: 'Today, 08:30 AM', status: 'SUCCESS' },
+                { id: 'PAY-854', method: 'Razorpay UPI (PhonePe)', amount: 240, ref: 'UPI/40919019208', date: 'Yesterday, 01:15 PM', status: 'SUCCESS' },
+              ].map((p) => (
+                <div key={p.id} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-slate-950 dark:text-white">{p.method}</p>
+                    <p className="text-[10px] font-mono text-slate-400">{p.ref} • {p.date}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-black text-emerald-600">₹{p.amount}</p>
+                    <span className="text-[9px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">{p.status}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

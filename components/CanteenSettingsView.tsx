@@ -488,7 +488,7 @@ export const CanteenSettingsView: React.FC<CanteenSettingsViewProps> = ({ user, 
             <div className="space-y-2">
               <div>
                 <label className="text-[10px] font-semibold text-slate-500">Key ID</label>
-                <input type="text" readOnly defaultValue="rzp_live_998822334455" className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-900 rounded text-xs font-mono text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800" />
+                <input type="text" readOnly defaultValue={import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_TJCR2oIU69Zu0j"} className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-900 rounded text-xs font-mono text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800" />
               </div>
               <div>
                 <label className="text-[10px] font-semibold text-slate-500">Key Secret</label>

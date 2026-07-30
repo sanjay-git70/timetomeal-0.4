@@ -278,7 +278,7 @@ export const CanteenManagementView: React.FC = () => {
   // Navigation & Page State
   const [viewMode, setViewMode] = useState<'list' | 'detail' | 'register'>('list');
   const [selectedCanteen, setSelectedCanteen] = useState<CanteenRecord | null>(null);
-  const [detailTab, setDetailTab] = useState<'dashboard' | 'orders' | 'payments' | 'reports' | 'location' | 'commission' | 'profile'>('dashboard');
+  const [detailTab, setDetailTab] = useState<'dashboard' | 'orders' | 'payments' | 'reports' | 'location' | 'commission' | 'profile' | 'analytics'>('dashboard');
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
@@ -918,10 +918,11 @@ export const CanteenManagementView: React.FC = () => {
             { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
             { id: 'orders', label: 'Orders History', icon: ShoppingBag },
             { id: 'payments', label: 'Payments & Payouts', icon: CreditCard },
-            { id: 'reports', label: 'Reports & Analytics', icon: FileText },
+            { id: 'reports', label: 'Reports', icon: FileText },
             { id: 'location', label: 'Location & Geofence', icon: MapPin },
             { id: 'commission', label: 'Commission Settings', icon: Sliders },
             { id: 'profile', label: 'Profile & Business Details', icon: User },
+            { id: 'analytics', label: 'Analytics', icon: TrendingUp },
           ].map((t) => {
             const Icon = t.icon;
             const isActive = detailTab === t.id;
@@ -1141,6 +1142,32 @@ export const CanteenManagementView: React.FC = () => {
                 <p className="font-bold text-slate-950 dark:text-white">Bank Details:</p>
                 <p className="text-slate-500">{selectedCanteen.bankDetails.bankName} - IFSC: {selectedCanteen.bankDetails.ifsc}</p>
                 <p className="text-slate-500">Account: {selectedCanteen.bankDetails.accountNumber}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 8: ANALYTICS */}
+        {detailTab === 'analytics' && (
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-6 text-xs">
+            <h3 className="font-black text-sm text-slate-950 dark:text-white flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-emerald-500" /> Advanced Canteen Revenue & Order Velocity Analytics
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <span className="text-[10px] uppercase font-bold text-slate-400">Monthly Growth</span>
+                <p className="text-xl font-black text-emerald-600 mt-1">+18.4% YoY</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">Compared to previous month</p>
+              </div>
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <span className="text-[10px] uppercase font-bold text-slate-400">Order Cancellation Rate</span>
+                <p className="text-xl font-black text-blue-600 mt-1">1.2% Low</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">Below 2.0% platform threshold</p>
+              </div>
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <span className="text-[10px] uppercase font-bold text-slate-400">Repeat Diner Rate</span>
+                <p className="text-xl font-black text-purple-600 mt-1">84.2% High</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">Campus loyalty retention</p>
               </div>
             </div>
           </div>
